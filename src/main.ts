@@ -1,5 +1,6 @@
 import * as THREE from "three"
 import { OrbitControls } from "three/addons/controls/OrbitControls.js"
+import { GUI } from "three/addons/libs/lil-gui.module.min.js"
 import "./style.css"
 
 let camera: THREE.PerspectiveCamera
@@ -22,12 +23,58 @@ function init() {
 
   controls = new OrbitControls(camera, renderer.domElement)
 
-  const geometry = new THREE.BoxGeometry(1, 1, 1)
-  const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+  const params = {
+    color: "#000000",
+    showFillLight: true,
+    showDirLight: true,
+    showLightHelpers: false,
+  }
+
+  const geometry = new THREE.SphereGeometry(1, 32, 16)
+  const material = new THREE.MeshStandardMaterial({
+    color: params.color,
+    roughness: 0.6,
+    metalness: 0.1,
+  })
   cube = new THREE.Mesh(geometry, material)
 
   scene = new THREE.Scene()
   scene.add(cube)
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 3)
+  dirLight.position.set(2, -5, 0)
+  const dirLightHelper = new THREE.DirectionalLightHelper(dirLight, 1)
+  dirLightHelper.visible = false
+  scene.add(dirLight)
+  scene.add(dirLightHelper)
+
+  const fillLight = new THREE.DirectionalLight(0xffffff, 1)
+  fillLight.position.set(-5, 4, 2)
+  const fillLightHelper = new THREE.DirectionalLightHelper(fillLight, 1)
+  fillLightHelper.visible = false
+  scene.add(fillLight)
+  scene.add(fillLightHelper)
+
+  const gui = new GUI()
+  gui.addColor(params, "color").onChange((value) => material.color.set(value))
+  gui.add(material, "roughness", 0, 1)
+  gui.add(material, "metalness", 0, 1)
+  gui
+    .add(params, "showFillLight")
+    .name("Fill Light")
+    .onChange((value) => (fillLight.visible = value))
+  gui
+    .add(params, "showDirLight")
+    .name("Directional Light")
+    .onChange((value) => (dirLight.visible = value))
+  gui
+    .add(params, "showLightHelpers")
+    .name("Light Helper")
+    .onChange((value) => {
+      dirLightHelper.visible = value
+      fillLightHelper.visible = value
+    })
+  gui.open()
 
   window.addEventListener("resize", onWindowResize)
 }
@@ -40,8 +87,5 @@ function onWindowResize() {
 }
 
 function animate() {
-  cube.rotation.x += 0.01
-  cube.rotation.y += 0.01
-
   renderer.render(scene, camera)
 }
