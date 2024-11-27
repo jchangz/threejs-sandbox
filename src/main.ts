@@ -1,5 +1,6 @@
 import * as THREE from "three"
 import { OrbitControls } from "three/addons/controls/OrbitControls.js"
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js"
 import { GUI } from "three/addons/libs/lil-gui.module.min.js"
 import "./style.css"
 
@@ -10,10 +11,20 @@ let controls: OrbitControls
 
 let cube: THREE.Mesh
 
+let roomEnv: THREE.Texture
+
+const params = {
+  environment: "Room",
+  color: "#000000",
+  showFillLight: true,
+  showDirLight: true,
+  showLightHelpers: false,
+}
+
 init()
 
 function init() {
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000)
   camera.position.z = 5
 
   renderer = new THREE.WebGLRenderer()
@@ -23,13 +34,6 @@ function init() {
 
   controls = new OrbitControls(camera, renderer.domElement)
 
-  const params = {
-    color: "#000000",
-    showFillLight: true,
-    showDirLight: true,
-    showLightHelpers: false,
-  }
-
   const geometry = new THREE.SphereGeometry(1, 32, 16)
   const material = new THREE.MeshStandardMaterial({
     color: params.color,
@@ -37,6 +41,11 @@ function init() {
     metalness: 0.1,
   })
   cube = new THREE.Mesh(geometry, material)
+
+  // Room Environment
+  const environment = new RoomEnvironment()
+  const pmremGenerator = new THREE.PMREMGenerator(renderer)
+  roomEnv = pmremGenerator.fromScene(environment).texture
 
   scene = new THREE.Scene()
   scene.add(cube)
@@ -56,6 +65,7 @@ function init() {
   scene.add(fillLightHelper)
 
   const gui = new GUI()
+  gui.add(params, "environment", ["Room", "Dramatic"]).name("Environment")
   gui.addColor(params, "color").onChange((value) => material.color.set(value))
   gui.add(material, "roughness", 0, 1)
   gui.add(material, "metalness", 0, 1)
@@ -87,5 +97,14 @@ function onWindowResize() {
 }
 
 function animate() {
+  switch (params.environment) {
+    case "Room":
+      scene.environment = roomEnv
+      break
+    case "Dramatic":
+      scene.environment = null
+      break
+  }
+
   renderer.render(scene, camera)
 }
