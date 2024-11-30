@@ -10,12 +10,16 @@ let renderer: THREE.WebGLRenderer
 let controls: OrbitControls
 
 let cube: THREE.Mesh
+const group = new THREE.Group()
+const centerVector = new THREE.Vector3()
+const centerBox = new THREE.Box3()
 
 let roomEnv: THREE.Texture
 
 const params = {
   environment: "Room",
   color: "#000000",
+  showBoxHelper: false,
   showFillLight: true,
   showDirLight: true,
   showLightHelpers: false,
@@ -41,6 +45,12 @@ function init() {
     metalness: 0.1,
   })
   cube = new THREE.Mesh(geometry, material)
+  group.add(cube)
+
+  centerBox.setFromObject(group)
+  centerBox.getCenter(centerVector)
+  group.position.x -= centerVector.x
+  group.position.y -= centerVector.y
 
   // Room Environment
   const environment = new RoomEnvironment()
@@ -48,19 +58,23 @@ function init() {
   roomEnv = pmremGenerator.fromScene(environment).texture
 
   scene = new THREE.Scene()
-  scene.add(cube)
+  scene.add(group)
+
+  const box = new THREE.BoxHelper(group, 0xffff00)
+  box.visible = params.showBoxHelper
+  scene.add(box)
 
   const dirLight = new THREE.DirectionalLight(0xffffff, 3)
   dirLight.position.set(2, -5, 0)
   const dirLightHelper = new THREE.DirectionalLightHelper(dirLight, 1)
-  dirLightHelper.visible = false
+  dirLightHelper.visible = params.showLightHelpers
   scene.add(dirLight)
   scene.add(dirLightHelper)
 
   const fillLight = new THREE.DirectionalLight(0xffffff, 1)
   fillLight.position.set(-5, 4, 2)
   const fillLightHelper = new THREE.DirectionalLightHelper(fillLight, 1)
-  fillLightHelper.visible = false
+  fillLightHelper.visible = params.showLightHelpers
   scene.add(fillLight)
   scene.add(fillLightHelper)
 
@@ -69,6 +83,10 @@ function init() {
   gui.addColor(params, "color").onChange((value) => material.color.set(value))
   gui.add(material, "roughness", 0, 1)
   gui.add(material, "metalness", 0, 1)
+  gui
+    .add(params, "showBoxHelper")
+    .name("Box Helper")
+    .onChange((value) => (box.visible = value))
   gui
     .add(params, "showFillLight")
     .name("Fill Light")
