@@ -1,4 +1,7 @@
 import * as THREE from "three"
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js"
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js"
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js"
 import { OrbitControls } from "three/addons/controls/OrbitControls.js"
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js"
 import { GUI } from "three/addons/libs/lil-gui.module.min.js"
@@ -9,14 +12,20 @@ let scene: THREE.Scene
 let renderer: THREE.WebGLRenderer
 let controls: OrbitControls
 
-let cube: THREE.Mesh
 const group = new THREE.Group()
 const centerVector = new THREE.Vector3()
 const centerBox = new THREE.Box3()
 
 let roomEnv: THREE.Texture
 
+const images = import.meta.glob("./assets/*")
+const imagesMap: string[] = []
+for (const path in images) {
+  imagesMap.push(path)
+}
+
 const params = {
+  file: "",
   environment: "Room",
   color: "#000000",
   showBoxHelper: false,
@@ -38,19 +47,18 @@ function init() {
 
   controls = new OrbitControls(camera, renderer.domElement)
 
-  const geometry = new THREE.SphereGeometry(1, 32, 16)
+  const manager = new THREE.LoadingManager()
+  const dracoLoader = new DRACOLoader(manager)
+  dracoLoader.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.7/")
+  const loader = new GLTFLoader(manager).setDRACOLoader(dracoLoader).setMeshoptDecoder(MeshoptDecoder)
+
   const material = new THREE.MeshStandardMaterial({
     color: params.color,
     roughness: 0.6,
     metalness: 0.1,
   })
-  cube = new THREE.Mesh(geometry, material)
-  group.add(cube)
 
-  centerBox.setFromObject(group)
-  centerBox.getCenter(centerVector)
-  group.position.x -= centerVector.x
-  group.position.y -= centerVector.y
+  setGroupToCenter()
 
   // Room Environment
   const environment = new RoomEnvironment()
@@ -79,6 +87,18 @@ function init() {
   scene.add(fillLightHelper)
 
   const gui = new GUI()
+  gui
+    .add(params, "file", [""].concat(imagesMap))
+    .name("File")
+    .onChange((value) => {
+      loader.load(`./src/${value}`, (gltf) => {
+        gltf.scene.traverse((child) => {
+          if (child instanceof THREE.Mesh) child.material = material
+          group.add(child)
+          setGroupToCenter()
+        })
+      })
+    })
   gui.add(params, "environment", ["Room", "Dramatic"]).name("Environment")
   gui.addColor(params, "color").onChange((value) => material.color.set(value))
   gui.add(material, "roughness", 0, 1)
@@ -105,6 +125,13 @@ function init() {
   gui.open()
 
   window.addEventListener("resize", onWindowResize)
+}
+
+function setGroupToCenter() {
+  centerBox.setFromObject(group)
+  centerBox.getCenter(centerVector)
+  group.position.x -= centerVector.x
+  group.position.y -= centerVector.y
 }
 
 function onWindowResize() {
