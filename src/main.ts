@@ -91,6 +91,22 @@ function init() {
     .add(params, "file", [""].concat(imagesMap))
     .name("File")
     .onChange((value) => {
+      const filesToDispose: THREE.Object3D[] = []
+      if (group.children.length) {
+        group.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            filesToDispose.push(child)
+            child.geometry.dispose()
+          }
+        })
+        if (filesToDispose.length) {
+          console.log(filesToDispose)
+          for (let i = 0; i < filesToDispose.length; i++) {
+            group.remove(filesToDispose[i])
+          }
+        }
+      }
+
       loader.load(`./src/${value}`, (gltf) => {
         gltf.scene.traverse((child) => {
           if (child instanceof THREE.Mesh) child.material = material
