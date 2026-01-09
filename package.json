@@ -11,11 +11,13 @@
   },
   "dependencies": {
     "@react-three/fiber": "^9.5.0",
+    "@tailwindcss/vite": "^4.1.18",
     "@types/three": "^0.182.0",
     "gltf-validator": "^2.0.0-dev.3.10",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-dropzone": "^14.3.8",
+    "tailwindcss": "^4.1.18",
     "three": "^0.182.0"
   },
   "devDependencies": {
