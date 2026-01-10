@@ -68,3 +68,24 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+.app-container {
+  /* min-height: 100dvh; */
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 1;
+}
+.dropzone-container {
+  display: flex;
+  flex: 1 1 auto;
+  height: 100%;
+  width: 100%;
+  padding: 2rem;
+}
+.dropzone {
+  /* display: flex; */
+  /* padding: 2rem; */
+  /* align-items: center; */
+  justify-content: center;
+  /* width: 100%; */
+}
