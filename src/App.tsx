@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react"
 import "./App.css"
 import { useDropzone } from "react-dropzone"
+import * as validator from "gltf-validator"
 
 const baseStyle = {
   flex: 1,
@@ -32,7 +33,29 @@ const rejectStyle = {
 
 function App() {
   const onDrop = useCallback((acceptedFiles) => {
-    // Do something with the files
+    acceptedFiles.forEach((file) => {
+      const reader = new FileReader()
+      reader.onabort = () => console.log("file reading was aborted")
+      reader.onerror = () => console.log("file reading has failed")
+      reader.onload = () => {
+        // Do whatever you want with the file contents
+        const binaryStr = reader.result
+        validator.validateBytes(new Uint8Array(binaryStr)).then(
+          (result) => {
+            // [result] will contain validation report in object form.
+            // You can convert it to JSON to see its internal structure.
+            console.log(JSON.stringify(result, null, "  "))
+          },
+          (result) => {
+            // Promise rejection means that arguments were invalid or validator was unable
+            // to detect file format (glTF or GLB).
+            // [result] will contain exception string.
+            console.error(result)
+          }
+        )
+      }
+      reader.readAsArrayBuffer(file)
+    })
   }, [])
 
   const { getRootProps, getInputProps, isDragActive, isFocused, isDragAccept, isDragReject } = useDropzone({ onDrop })
