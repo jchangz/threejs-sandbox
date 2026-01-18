@@ -3,6 +3,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader"
 import { useDropzone } from "react-dropzone"
 import * as validator from "gltf-validator"
 import { Canvas } from "@react-three/fiber"
+import { CameraControls, Environment } from "@react-three/drei"
 import "./App.css"
 
 const baseStyle = {
@@ -90,8 +91,10 @@ function App() {
     <div className="app-container flex">
       {model ? (
         <Canvas>
+          <CameraControls />
           <ambientLight intensity={0.5} />
           <directionalLight position={[10, 10, 5]} />
+          <Environment preset="studio" />
           <mesh>
             <primitive object={model.scene} dispose={null} />
             <meshStandardMaterial />
