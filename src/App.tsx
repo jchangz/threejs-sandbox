@@ -3,7 +3,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader"
 import { useDropzone } from "react-dropzone"
 import * as validator from "gltf-validator"
 import { Canvas } from "@react-three/fiber"
-import { CameraControls, Environment } from "@react-three/drei"
+import { CameraControls, Environment, Center } from "@react-three/drei"
 import "./App.css"
 
 const baseStyle = {
@@ -56,7 +56,7 @@ function App() {
               },
               (error) => {
                 console.error("Error loading GLTF from buffer:", error)
-              }
+              },
             )
 
             // [result] will contain validation report in object form.
@@ -68,7 +68,7 @@ function App() {
             // to detect file format (glTF or GLB).
             // [result] will contain exception string.
             console.error(result)
-          }
+          },
         )
       }
       reader.readAsArrayBuffer(file)
@@ -84,21 +84,23 @@ function App() {
       ...(isDragAccept ? acceptStyle : {}),
       ...(isDragReject ? rejectStyle : {}),
     }),
-    [isFocused, isDragAccept, isDragReject]
+    [isFocused, isDragAccept, isDragReject],
   )
 
   return (
     <div className="app-container flex">
       {model ? (
-        <Canvas>
-          <CameraControls />
+        <Canvas camera={{ position: [4, 1, 2], fov: 35 }}>
+          <color attach="background" args={["skyblue"]} />
           <ambientLight intensity={0.5} />
           <directionalLight position={[10, 10, 5]} />
           <Environment preset="studio" />
-          <mesh>
-            <primitive object={model.scene} dispose={null} />
-            <meshStandardMaterial />
-          </mesh>
+          <Center>
+            <mesh>
+              <primitive object={model.scene} dispose={null} />
+            </mesh>
+          </Center>
+          <CameraControls />
         </Canvas>
       ) : (
         <div className="dropzone-container">
