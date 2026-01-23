@@ -11,28 +11,26 @@ const baseStyle = {
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  padding: "20px",
   borderWidth: 2,
   borderRadius: 2,
   borderColor: "#eeeeee",
   borderStyle: "dashed",
-  backgroundColor: "transparent",
   color: "#bdbdbd",
   outline: "none",
   transition: "border .24s ease-in-out",
 }
 
-const focusedStyle = {
-  backgroundColor: "#2196f3",
-}
+// const focusedStyle = {
+//   backgroundColor: "#2196f3",
+// }
 
-const acceptStyle = {
-  backgroundColor: "#00e676",
-}
+// const acceptStyle = {
+//   backgroundColor: "#00e676",
+// }
 
-const rejectStyle = {
-  backgroundColor: "#ff1744",
-}
+// const rejectStyle = {
+//   backgroundColor: "#ff1744",
+// }
 
 function App() {
   const [model, setModel] = useState(null)
@@ -80,36 +78,35 @@ function App() {
   const style = useMemo(
     () => ({
       ...baseStyle,
-      ...(isFocused ? focusedStyle : {}),
-      ...(isDragAccept ? acceptStyle : {}),
-      ...(isDragReject ? rejectStyle : {}),
     }),
-    [isFocused, isDragAccept, isDragReject],
+    [],
   )
 
   return (
     <div className="app-container flex">
-      {model ? (
-        <Canvas camera={{ position: [4, 1, 2], fov: 35 }}>
-          <color attach="background" args={["skyblue"]} />
-          <ambientLight intensity={0.5} />
-          <directionalLight position={[10, 10, 5]} />
-          <Environment preset="studio" />
-          <Center>
-            <mesh>
-              <primitive object={model.scene} dispose={null} />
-            </mesh>
-          </Center>
-          <CameraControls />
-        </Canvas>
-      ) : (
-        <div className="dropzone-container">
-          <div className={`dropzone`} {...getRootProps({ style })}>
-            <input {...getInputProps()} />
-            <p>Drag 'n' drop some files here, or click to select files</p>
-          </div>
+      <div className="dropzone-container">
+        <div className={`dropzone`} {...getRootProps({ style })}>
+          {model ? (
+            <Canvas camera={{ position: [4, 1, 2], fov: 35 }}>
+              <color attach="background" args={["skyblue"]} />
+              <ambientLight intensity={0.5} />
+              <directionalLight position={[10, 10, 5]} />
+              <Environment preset="studio" />
+              <Center>
+                <mesh>
+                  <primitive object={model.scene} dispose={null} />
+                </mesh>
+              </Center>
+              <CameraControls />
+            </Canvas>
+          ) : (
+            <>
+              <input {...getInputProps()} />
+              <p>Drag 'n' drop some files here, or click to select files</p>
+            </>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
