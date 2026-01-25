@@ -86,4 +86,5 @@ button:focus-visible {
 }
 .dropzone {
   justify-content: center;
+  width: 100%;
 }

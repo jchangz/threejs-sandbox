@@ -20,9 +20,9 @@ const baseStyle = {
   transition: "border .24s ease-in-out",
 }
 
-// const focusedStyle = {
-//   backgroundColor: "#2196f3",
-// }
+const activeStyle = {
+  borderStyle: "none",
+}
 
 // const acceptStyle = {
 //   backgroundColor: "#00e676",
@@ -78,14 +78,15 @@ function App() {
   const style = useMemo(
     () => ({
       ...baseStyle,
+      ...(model ? activeStyle : {}),
     }),
-    [],
+    [model],
   )
 
   return (
     <div className="app-container flex">
       <div className="dropzone-container">
-        <div className={`dropzone`} {...getRootProps({ style })}>
+        <div className="dropzone" {...getRootProps({ style })}>
           {model ? (
             <Canvas camera={{ position: [4, 1, 2], fov: 35 }}>
               <color attach="background" args={["skyblue"]} />
