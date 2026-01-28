@@ -1,10 +1,28 @@
 import { useState, useCallback, useMemo } from "react"
+import { createPortal } from "react-dom"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader"
 import { useDropzone } from "react-dropzone"
 import * as validator from "gltf-validator"
 import { Canvas } from "@react-three/fiber"
 import { CameraControls, Environment, Center } from "@react-three/drei"
 import "./App.css"
+
+function ModalContent({ onClose, content }) {
+  return (
+    <div className="modal">
+      <div>{content}</div>
+      <button onClick={onClose}>Close</button>
+    </div>
+  )
+}
+
+function PortalExample({ showModal, setShowModal, error }) {
+  return (
+    <>
+      {showModal && createPortal(<ModalContent content={error} onClose={() => setShowModal(false)} />, document.body)}
+    </>
+  )
+}
 
 const baseStyle = {
   flex: 1,
@@ -34,6 +52,8 @@ const activeStyle = {
 
 function App() {
   const [model, setModel] = useState(null)
+  const [showModal, setShowModal] = useState(false)
+  const [error, setError] = useState("")
 
   const onDrop = useCallback((acceptedFiles) => {
     acceptedFiles.forEach((file) => {
@@ -53,6 +73,8 @@ function App() {
                 setModel(gltf)
               },
               (error) => {
+                setError(error)
+                setShowModal(true)
                 console.error("Error loading GLTF from buffer:", error)
               },
             )
@@ -65,6 +87,8 @@ function App() {
             // Promise rejection means that arguments were invalid or validator was unable
             // to detect file format (glTF or GLB).
             // [result] will contain exception string.
+            setError(result)
+            setShowModal(true)
             console.error(result)
           },
         )
@@ -85,6 +109,7 @@ function App() {
 
   return (
     <div className="app-container flex">
+      <PortalExample showModal={showModal} setShowModal={setShowModal} error={error} />
       <div className="dropzone-container">
         <div className="dropzone" {...getRootProps({ style })}>
           {model ? (
