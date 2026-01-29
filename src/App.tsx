@@ -8,9 +8,10 @@ import { CameraControls, Environment, Center } from "@react-three/drei"
 import "./App.css"
 
 function ModalContent({ onClose, content }) {
+  const contentFormat = typeof content === "object" ? content.toString() : content
   return (
     <div className="modal">
-      <div>{content}</div>
+      <div>{contentFormat}</div>
       <button onClick={onClose}>Close</button>
     </div>
   )
