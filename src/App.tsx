@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react"
+import type { Dispatch, SetStateAction } from "react"
 import { createPortal } from "react-dom"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader"
 import { useDropzone } from "react-dropzone"
@@ -7,7 +8,7 @@ import { Canvas } from "@react-three/fiber"
 import { CameraControls, Environment, Center } from "@react-three/drei"
 import "./App.css"
 
-function ModalContent({ onClose, content }) {
+function ModalContent({ onClose, content }: { onClose: () => void; content: string | object }) {
   const contentFormat = typeof content === "object" ? content.toString() : content
   return (
     <div className="modal">
@@ -17,7 +18,15 @@ function ModalContent({ onClose, content }) {
   )
 }
 
-function PortalExample({ showModal, setShowModal, error }) {
+function PortalExample({
+  showModal,
+  setShowModal,
+  error,
+}: {
+  showModal: boolean
+  setShowModal: Dispatch<SetStateAction<boolean>>
+  error: string | object
+}) {
   return (
     <>
       {showModal && createPortal(<ModalContent content={error} onClose={() => setShowModal(false)} />, document.body)}
@@ -56,7 +65,7 @@ function App() {
   const [showModal, setShowModal] = useState(false)
   const [error, setError] = useState("")
 
-  const onDrop = useCallback((acceptedFiles) => {
+  const onDrop = useCallback((acceptedFiles: File[]) => {
     acceptedFiles.forEach((file) => {
       const reader = new FileReader()
       reader.onabort = () => console.log("file reading was aborted")
