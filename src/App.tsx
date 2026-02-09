@@ -1,48 +1,31 @@
-import { useState, useCallback, useMemo } from "react"
-import type { Dispatch, SetStateAction } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { useDropzone } from "react-dropzone"
 import * as validator from "gltf-validator"
 import { Canvas } from "@react-three/fiber"
-import { CameraControls, Environment, Center } from "@react-three/drei"
+import { CameraControls, Environment, Center, ContactShadows } from "@react-three/drei"
 import "./App.css"
 
 // --- Types ---
 
-interface ModalContentProps {
-  onClose: () => void
-  content: string | object
-}
-
-interface PortalExampleProps {
-  showModal: boolean
-  setShowModal: Dispatch<SetStateAction<boolean>>
-  error: string | object
-}
+type AppError = string | object | null
 
 // --- Components ---
 
-function ModalContent({ onClose, content }: ModalContentProps) {
-  // Better handling for object errors (like validation reports)
-  const contentFormat = typeof content === "object" 
-    ? JSON.stringify(content, null, 2) 
-    : content
+const Modal = ({ content, onClose }: { content: AppError; onClose: () => void }) => {
+  if (!content) return null
 
-  return (
-    <div className="modal" style={{ whiteSpace: 'pre-wrap', overflow: 'auto', maxHeight: '80vh' }}>
-      <div>{contentFormat}</div>
-      <button onClick={onClose}>Close</button>
-    </div>
-  )
-}
-
-function PortalExample({ showModal, setShowModal, error }: PortalExampleProps) {
-  if (!showModal) return null
+  const displayContent = typeof content === "object" ? JSON.stringify(content, null, 2) : content
 
   return createPortal(
-    <ModalContent content={error} onClose={() => setShowModal(false)} />,
-    document.body
+    <div className="modal" style={{ whiteSpace: "pre-wrap", overflow: "auto", maxHeight: "80vh" }}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <pre>{displayContent}</pre>
+        <button onClick={onClose}>Close</button>
+      </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -65,50 +48,60 @@ const activeStyle: React.CSSProperties = {
 }
 
 function App() {
-  // Typed the model state as GLTF or null
   const [model, setModel] = useState<GLTF | null>(null)
-  const [showModal, setShowModal] = useState(false)
-  const [error, setError] = useState<string | object>("")
+  const [error, setError] = useState<AppError>(null)
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    acceptedFiles.forEach((file) => {
-      const reader = new FileReader()
-      reader.onabort = () => console.log("file reading was aborted")
-      reader.onerror = () => console.log("file reading has failed")
-      
-      reader.onload = () => {
-        const binaryStr = reader.result
-        if (!(binaryStr instanceof ArrayBuffer)) return
-
-        // gltf-validator expects a Uint8Array
-        validator.validateBytes(new Uint8Array(binaryStr)).then(
-          (result) => {
-            const loader = new GLTFLoader()
-            // Loader.parse takes the buffer directly
-            loader.parse(
-              binaryStr,
-              "",
-              (gltf) => {
-                setModel(gltf)
-              },
-              (err) => {
-                setError(err instanceof Error ? err.message : "Load Error")
-                setShowModal(true)
-              },
-            )
-            console.log("Validation Result:", result)
-          },
-          (rejectReason) => {
-            setError(rejectReason)
-            setShowModal(true)
-          },
+  // Cleanup object URLs to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (model) {
+        model.scenes.forEach((scene) =>
+          scene.traverse((obj: any) => {
+            if (obj.isMesh) {
+              obj.geometry.dispose()
+              obj.material.dispose()
+            }
+          }),
         )
       }
-      reader.readAsArrayBuffer(file)
-    })
+    }
+  }, [model])
+
+  const handleFile = useCallback(async (file: File) => {
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+
+      // 1. Validate
+      const validationResult = await validator.validateBytes(new Uint8Array(arrayBuffer))
+      if (validationResult.issues.numErrors > 0) {
+        throw validationResult
+      }
+
+      // 2. Load
+      const url = URL.createObjectURL(file)
+      const loader = new GLTFLoader()
+
+      loader.load(
+        url,
+        (gltf) => {
+          setModel(gltf)
+          URL.revokeObjectURL(url) // Clean up
+        },
+        undefined,
+        (err) => {
+          throw err
+        },
+      )
+    } catch (err: any) {
+      setError(err?.message || err || "Unknown Error")
+    }
   }, [])
 
-  const { getRootProps, getInputProps } = useDropzone({ onDrop })
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: (files) => files[0] && handleFile(files[0]),
+    multiple: false,
+    // accept: { "model/gltf-binary": [".glb"], "model/gltf+json": [".gltf"] },
+  })
 
   const style = useMemo(
     () => ({
@@ -120,7 +113,7 @@ function App() {
 
   return (
     <div className="app-container flex">
-      <PortalExample showModal={showModal} setShowModal={setShowModal} error={error} />
+      <Modal content={error} onClose={() => setError(null)} />
       <div className="dropzone-container">
         <div className="dropzone" {...getRootProps({ style })}>
           {model ? (
@@ -130,15 +123,15 @@ function App() {
               <directionalLight position={[10, 10, 5]} />
               <Environment preset="studio" />
               <Center>
-                {/* primitive object expects the scene from the GLTF result */}
                 <primitive object={model.scene} dispose={null} />
               </Center>
-              <CameraControls />
+              <ContactShadows opacity={0.4} scale={10} blur={2} far={4.5} />
+              <CameraControls makeDefault />
             </Canvas>
           ) : (
             <>
               <input {...getInputProps()} />
-              <p>Drag 'n' drop some files here, or click to select files</p>
+              <p>{isDragActive ? "Drop it!" : "Drag a GLB/GLTF file here"}</p>
             </>
           )}
         </div>
