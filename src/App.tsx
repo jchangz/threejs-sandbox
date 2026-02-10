@@ -6,6 +6,7 @@ import * as validator from "gltf-validator"
 import { Canvas } from "@react-three/fiber"
 import { CameraControls, Environment, Center, ContactShadows } from "@react-three/drei"
 import "./App.css"
+import { LoadingManager } from "three"
 
 // --- Types ---
 
@@ -67,39 +68,76 @@ function App() {
     }
   }, [model])
 
-  const handleFile = useCallback(async (file: File) => {
-    try {
-      const arrayBuffer = await file.arrayBuffer()
+  const handleFiles = useCallback(async (files: File[]) => {
+    const manager = new LoadingManager()
+    const objectURLs: string[] = []
+    const fileMap = new Map<string, File>()
 
-      // 1. Validate
-      const validationResult = await validator.validateBytes(new Uint8Array(arrayBuffer))
+    // 1. Map all files by their name for easy lookup
+    files.forEach((file) => fileMap.set(file.name, file))
+
+    // 2. Set up the LoadingManager to intercept requests
+    manager.setURLModifier((url) => {
+      // Clean up Three.js path prefixes if necessary
+      const fileName = url.split("/").pop() || ""
+      const file = fileMap.get(fileName)
+
+      if (file) {
+        const blobUrl = URL.createObjectURL(file)
+        objectURLs.push(blobUrl) // Keep track for cleanup
+        return blobUrl
+      }
+      return url
+    })
+
+    try {
+      // 3. Find the main scene file (.gltf or .glb)
+      const rootFile = files.find((f) => f.name.match(/\.(gltf|glb)$/i))
+      if (!rootFile) throw new Error("No .gltf or .glb file found!")
+
+      const rootBuffer = new Uint8Array(await rootFile.arrayBuffer())
+      const validationResult = await validator.validateBytes(rootBuffer, {
+        // This callback is crucial for multi-file .gltf assets
+        externalResourceFunction: (uri: string) => {
+          return new Promise((resolve, reject) => {
+            const file = fileMap.get(uri)
+            console.log({ file })
+            if (file) {
+              file.arrayBuffer().then((buf) => resolve(new Uint8Array(buf)))
+            } else {
+              reject(`External resource ${uri} not found in dropped files.`)
+            }
+          })
+        },
+      })
+
+      console.log(validationResult)
+
       if (validationResult.issues.numErrors > 0) {
-        throw validationResult
+        setError(validationResult) // This will show the JSON report in your modal
+        return
       }
 
-      // 2. Load
-      const url = URL.createObjectURL(file)
-      const loader = new GLTFLoader()
+      console.log("Validation successful!", validationResult.info)
 
-      loader.load(
-        url,
-        (gltf) => {
-          setModel(gltf)
-          URL.revokeObjectURL(url) // Clean up
-        },
-        undefined,
-        (err) => {
-          throw err
-        },
-      )
+      const loader = new GLTFLoader(manager)
+
+      // We use the root file's actual URL to start the process
+      const rootURL = URL.createObjectURL(rootFile)
+      objectURLs.push(rootURL)
+
+      loader.load(rootURL, (gltf) => {
+        setModel(gltf)
+        // Note: Don't revoke URLs immediately as textures load lazily
+      })
     } catch (err: any) {
-      setError(err?.message || err || "Unknown Error")
+      setError(err.message)
     }
   }, [])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: (files) => files[0] && handleFile(files[0]),
-    multiple: false,
+    onDrop: handleFiles,
+    multiple: true,
     // accept: { "model/gltf-binary": [".glb"], "model/gltf+json": [".gltf"] },
   })
 
