@@ -1,38 +1,40 @@
 declare module "gltf-validator" {
-  const enum Severity {
+  export enum Severity {
     Error = 0,
     Warning = 1,
     Information = 2,
     Hint = 3,
   }
 
-  interface Messages {
+  export interface Message {
     code: string
     message: string
     severity: Severity
-    pointer: string
+    pointer?: string // Optional because not all issues are tied to a specific JSON pointer
+    offset?: number // Often present in binary (GLB) validation
   }
 
-  interface Issues {
+  export interface Issues {
     numErrors: number
     numWarnings: number
     numInfos: number
     numHints: number
-    messages: Messages[]
+    messages: Message[]
     truncated: boolean
   }
 
-  interface Resources {
+  export interface Resource {
     pointer: string
     mimeType: string
     storage: string
-    uri: string
+    uri?: string // Can be undefined if it's internal/embedded data
+    byteLength?: number
   }
 
-  interface Info {
+  export interface Info {
     version: string
     generator: string
-    resources: Resources[]
+    resources: Resource[]
     animationCount: number
     materialCount: number
     hasMorphTargets: boolean
@@ -47,7 +49,7 @@ declare module "gltf-validator" {
     maxAttributes: number
   }
 
-  interface Result {
+  export interface Result {
     uri: string
     mimeType: string
     validatorVersion: string
@@ -56,17 +58,17 @@ declare module "gltf-validator" {
     info: Info
   }
 
+  export interface ValidationOptions {
+    uri?: string
+    externalResourceFunction?: (uri: string) => Promise<Uint8Array>
+    validateAccessorData?: boolean
+    maxMessages?: number
+    ignoredMessages?: string[]
+    severityOverrides?: { [code: string]: Severity }
+  }
+
   /**
    * Validates a GLTF/GLB asset provided as a Uint8Array.
-   * @param data - The glTF/GLB file content as bytes.
-   * @param options - Optional configuration for validation.
-   * @returns A promise that resolves to the validation report.
    */
-  export function validateBytes(
-    data: Uint8Array,
-    options?: {
-      maxSeverity?: number
-      uri?: string
-    },
-  ): Promise<Result>
+  export function validateBytes(data: Uint8Array, options?: ValidationOptions): Promise<Result>
 }
